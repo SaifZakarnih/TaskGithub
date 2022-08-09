@@ -1,1 +1,0 @@
-['Country: ', 'South Africa', ' Confirmed: ', 4004555, ' Recovered: ', 0, ' Deaths: ', 101982, ' Active: ', 3902573]
