@@ -111,14 +111,15 @@ class TopCountriesByDate(rest_framework.generics.GenericAPIView):
                 first_date=real_first_date,
                 second_date=real_second_date)).json()
             result_dictionary = {}
-            first_value = country_information[0]['Cases']
-            number_of_cases = len(country_information)
             sum_of_cases = 0
-            for current_day in country_information:
-                sum_of_cases = sum_of_cases + current_day['Cases']
+            previous_country = 0
+            for current_day in country_information[1:]:
+                sum_of_cases = sum_of_cases + (current_day['Cases'] - country_information[previous_country]['Cases'])
+                previous_country += 1
             result_dictionary['Country'] = current_day['Country']
-            result_dictionary[case] = sum_of_cases - (first_value * number_of_cases)
-            result_list.append(result_dictionary)
+            result_dictionary[case] = sum_of_cases
+            if result_dictionary not in result_list:
+                result_list.append(result_dictionary)
 
         result_list = sorted(result_list, key=lambda d: d[case], reverse=True)
 
