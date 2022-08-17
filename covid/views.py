@@ -30,7 +30,7 @@ class CountrySubscribe(rest_framework.generics.CreateAPIView):
         if country_object.exists():
             exist_check = covid_models.Covid19APICountryUserAttribution.objects.all().filter(user=request.user, covid_19_api_country=country_object[0]).exists()
             if exist_check:
-                return rest_framework.response.Response("Country {input} for user {user} already exists!".format(input=str(country_object[0]), user=str(request.user)))
+                return rest_framework.response.Response("Country {input} for user {user} already exists!".format(input=str(country_object[0]), user=str(request.user)), status=409)
             elif not exist_check:
                 created_object = covid_models.Covid19APICountryUserAttribution.objects.create(
                     user=request.user,
@@ -40,14 +40,18 @@ class CountrySubscribe(rest_framework.generics.CreateAPIView):
                     "User": str(created_object.user),
                     "Country": str(created_object.covid_19_api_country),
                 }
-                return rest_framework.response.Response(result_dictionary)
+                return rest_framework.response.Response(result_dictionary, status=201)
         else:
-            return rest_framework.response.Response("Invalid input {input}, please use one of these keys {keys}".format(input=self.kwargs['slug'], keys=all_slugs))
+            return rest_framework.response.Response("Invalid input {input}, please use one of these keys {keys}".format(input=self.kwargs['slug'], keys=all_slugs), status=400)
 
 
 class ViewPercentage(rest_framework.generics.GenericAPIView):
 
     def get(self, request, *args, **kwargs):
+        if (self.kwargs['first_value'] or self.kwargs['second_value']) not in ["confirmed", "deaths", "active"]:
+            return rest_framework.response.Response("Case must be confirmed, deaths, or active", status=400)
+        if not covid_models.Covid19APICountry.objects.all().filter(remote_slug=self.kwargs['slug']):
+            return rest_framework.response.Response("Incorrect country slug", status=400)
         country_information = requests.get("https://api.covid19api.com/total/dayone/country/{key}".format(
             key=self.kwargs['slug'])).json()
         first_value = self.kwargs['first_value'].title()
@@ -61,12 +65,14 @@ class ViewPercentage(rest_framework.generics.GenericAPIView):
             second_value: last_entry[second_value],
             "Percentage": percentage
         }
-        return rest_framework.response.Response(result_dictionary)
+        return rest_framework.response.Response(result_dictionary, status=200)
 
 
 class TopCountries(rest_framework.generics.GenericAPIView):
 
     def get(self, request, *args, **kwargs):
+        if self.kwargs['case'] not in ["confirmed", "deaths"]:
+            return rest_framework.response.Response("Case must be confirmed or deaths", status=400)
         case = self.kwargs['case'].title()
         case = "Total" + case
         country_list = requests.get("https://api.covid19api.com/summary").json()
@@ -79,19 +85,24 @@ class TopCountries(rest_framework.generics.GenericAPIView):
             if result_dictionary not in result_list:
                 result_list.append(result_dictionary)
             result_dictionary = {}
-        return rest_framework.response.Response(result_list)
+        return rest_framework.response.Response(result_list, status=200)
 
 
 class TopCountriesByDate(rest_framework.generics.GenericAPIView):
 
     def get(self, request, *args, **kwargs):
+        try:
+            datetime.datetime.strptime(self.kwargs['from'], "%Y-%m-%d")
+            datetime.datetime.strptime(self.kwargs['to'], "%Y-%m-%d")
+        except ValueError:
+            return rest_framework.response.Response("Date must be in YYYY-MM-DD format!", status=400)
         first_date = datetime.datetime.strptime(self.kwargs['from'], "%Y-%m-%d")
         second_date = datetime.datetime.strptime(self.kwargs['to'], "%Y-%m-%d")
         case = self.kwargs['case'].title()
         if case not in ("Confirmed", "Deaths", "Recovered"):
-            return rest_framework.response.Response("Case must be 'confirmed', 'recovered' or 'deaths' not {case}".format(case=case))
+            return rest_framework.response.Response("Case must be 'confirmed', 'recovered' or 'deaths' not {case}".format(case=case), status=400)
         if first_date > second_date:
-            return rest_framework.response.Response("Please enter a proper date range, {first_date} is after {second_date}".format(first_date=str(first_date).split(" ")[0], second_date=str(first_date).split(" ")[0]))
+            return rest_framework.response.Response("Please enter a proper date range, {first_date} is after {second_date}".format(first_date=str(first_date).split(" ")[0], second_date=str(first_date).split(" ")[0]), status=400)
         first_date = first_date - datetime.timedelta(days=1)
         first_date = str(first_date)
         first_date = first_date.split(" ")
@@ -119,4 +130,4 @@ class TopCountriesByDate(rest_framework.generics.GenericAPIView):
 
         result_list = sorted(result_list, key=lambda d: d[case], reverse=True)
 
-        return rest_framework.response.Response(result_list[:self.kwargs['number']])
+        return rest_framework.response.Response(result_list[:self.kwargs['number']], status=200)

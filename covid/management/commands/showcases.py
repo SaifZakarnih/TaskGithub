@@ -1,5 +1,8 @@
 import django.core.management.base
 import requests
+import rest_framework.response
+from rest_framework import status
+
 from ... import models as covid_models
 
 
