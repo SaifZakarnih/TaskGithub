@@ -1,8 +1,5 @@
-import unittest
-
 import rest_framework.test
 import rest_framework.authtoken.models
-
 from . import models as covid_models
 import requests
 
@@ -73,6 +70,7 @@ class TestPercentage(rest_framework.test.APITestCase):
         response = self.client.get('/api/v1/percentage/deaths/active/barain', **self.auth_headers)
         self.assertEquals(response.status_code, 400)
 
+
 class TestTopCountries(rest_framework.test.APITestCase):
 
     def setUp(self):
@@ -86,16 +84,21 @@ class TestTopCountries(rest_framework.test.APITestCase):
         }
 
     def test_correct_scenario(self):
-        response = self.client.get('/api/v1/top/3/confirmed', **self.auth_headers)
+        response = self.client.get('/api/v1/top/confirmed/3', **self.auth_headers)
         self.assertEquals(response.status_code, 200)
 
     def test_incorrect_case(self):
-        response = self.client.get('/api/v1/top/3/fake-case', **self.auth_headers)
+        response = self.client.get('/api/v1/top/fake-case/3', **self.auth_headers)
         self.assertEquals(response.status_code, 400)
 
     def test_incorrect_number(self):
-        response = self.client.get('/api/v1/top/a/confirmed', **self.auth_headers)
+        response = self.client.get('/api/v1/top/confirmed/a', **self.auth_headers)
         self.assertEquals(response.status_code, 404)
+
+    def test_no_number(self):
+        response = self.client.get('/api/v1/top/confirmed', **self.auth_headers)
+        self.assertEquals(response.status_code, 200)
+
 
 class TestByDate(rest_framework.test.APITestCase):
 
@@ -113,17 +116,21 @@ class TestByDate(rest_framework.test.APITestCase):
         self.client.post('/api/v1/subscribe/ukraine', **self.auth_headers)
 
     def test_correct_scenario(self):
-        response = self.client.get('/api/v1/topbydate/3/2020-05-08/2020-05-11/confirmed', **self.auth_headers)
+        response = self.client.get('/api/v1/topdate/2020-05-08/2020-05-11/confirmed/3', **self.auth_headers)
         self.assertEquals(response.status_code, 200)
 
     def test_incorrect_date(self):
-        response = self.client.get('/api/v1/topbydate/3/202-05-08/2020-05-11/confirmed', **self.auth_headers)
+        response = self.client.get('/api/v1/topdate/202-05-08/2020-05-11/confirmed/3', **self.auth_headers)
         self.assertEquals(response.status_code, 400)
 
     def test_ahead_date(self):
-        response = self.client.get('/api/v1/topbydate/3/2020-05-11/2020-05-08/confirmed', **self.auth_headers)
+        response = self.client.get('/api/v1/topdate/2020-05-11/2020-05-08/confirmed/3', **self.auth_headers)
         self.assertEquals(response.status_code, 400)
 
     def test_wrong_case(self):
-        response = self.client.get('/api/v1/topbydate/3/2020-05-08/2020-05-11/fake', **self.auth_headers)
+        response = self.client.get('/api/v1/topdate/2020-05-08/2020-05-11/fake/3', **self.auth_headers)
         self.assertEquals(response.status_code, 400)
+
+    def test_no_number(self):
+        response = self.client.get('/api/v1/topdate/2020-05-08/2020-05-11/confirmed', **self.auth_headers)
+        self.assertEquals(response.status_code, 200)

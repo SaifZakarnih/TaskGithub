@@ -8,36 +8,37 @@ import requests
 import rest_framework.generics
 
 
-@rest_framework.decorators.api_view(['GET'])
-@rest_framework.decorators.permission_classes([rest_framework.permissions.AllowAny])
-def import_countries(request):
-    country_list = requests.get('https://api.covid19api.com/countries')
-    for current_country in country_list.json():
-        if not covid_models.Covid19APICountry.objects.filter(remote_slug=current_country["Slug"]).exists():
-            covid_models.Covid19APICountry.objects.create(remote_slug=current_country["Slug"],
-                                                          remote_country=current_country["Country"])
-        else:
-            covid_models.Covid19APICountry.objects.all().filter(remote_slug=current_country["Slug"]).update(
-                remote_slug=current_country["Slug"], remote_country=current_country["Country"])
-        return rest_framework.response.Response(status=201)
+class ImportCountries(rest_framework.views.APIView):
+
+    permission_classes = [rest_framework.permissions.AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        country_list = requests.get('https://api.covid19api.com/countries')
+        for current_country in country_list.json():
+            queryset = covid_models.Covid19APICountry.objects.filter(remote_slug=current_country['Slug'])
+            if not queryset.exists():
+                covid_models.Covid19APICountry.objects.create(remote_slug=current_country["Slug"],
+                                                              remote_country=current_country["Country"])
+            else:
+                queryset.update(
+                    remote_slug=current_country["Slug"], remote_country=current_country["Country"])
+            return rest_framework.response.Response(status=201)
 
 
 class CountrySubscribe(rest_framework.generics.CreateAPIView):
 
     def post(self, request, *args, **kwargs):
         country_slug = self.kwargs['slug']
-        all_slugs = covid_models.Covid19APICountry.objects.values_list('remote_slug')
-        all_slugs = list(all_slugs)
+        all_slugs = covid_models.Covid19APICountry.objects.values_list('remote_slug', flat=True)
         country_object = covid_models.Covid19APICountry.objects.filter(remote_slug=country_slug)
         if country_object.exists():
-            exist_check = covid_models.Covid19APICountryUserAttribution.objects.all().filter(user=request.user,
-                                                                                             covid_19_api_country=
-                                                                                             country_object[0]).exists()
+            exist_check = covid_models.Covid19APICountryUserAttribution.objects.filter(user=request.user, covid_19_api_country=country_object[0]).exists()
             if exist_check:
                 return rest_framework.response.Response(
-                    "Country {input} for user {user} already exists!".format(input=str(country_object[0]),
-                                                                             user=str(request.user)), status=409)
-            elif not exist_check:
+                    f"This user is already subscribed to Country {country_object[0]}",
+                    status=409
+                )
+            else:
                 created_object = covid_models.Covid19APICountryUserAttribution.objects.create(
                     user=request.user,
                     covid_19_api_country=covid_models.Covid19APICountry.objects.get(remote_slug=country_slug))
@@ -48,9 +49,7 @@ class CountrySubscribe(rest_framework.generics.CreateAPIView):
                 }
                 return rest_framework.response.Response(result_dictionary, status=201)
         else:
-            return rest_framework.response.Response(
-                "Invalid input {input}, please use one of these keys {keys}".format(input=self.kwargs['slug'],
-                                                                                    keys=all_slugs), status=400)
+            return rest_framework.response.Response(f"Invalid input {country_slug}, please use one of these keys {all_slugs}", status=400)
 
 
 class ViewPercentage(rest_framework.generics.GenericAPIView):
@@ -58,7 +57,7 @@ class ViewPercentage(rest_framework.generics.GenericAPIView):
     def get(self, request, *args, **kwargs):
         if (self.kwargs['first_value'] or self.kwargs['second_value']) not in ["confirmed", "deaths", "active"]:
             return rest_framework.response.Response("Case must be confirmed, deaths, or active", status=400)
-        if not covid_models.Covid19APICountry.objects.all().filter(remote_slug=self.kwargs['slug']):
+        if not covid_models.Covid19APICountry.objects.filter(remote_slug=self.kwargs['slug']):
             return rest_framework.response.Response("Incorrect country slug", status=400)
         country_information = requests.get("https://api.covid19api.com/total/dayone/country/{key}".format(
             key=self.kwargs['slug'])).json()
@@ -66,10 +65,9 @@ class ViewPercentage(rest_framework.generics.GenericAPIView):
         second_value = self.kwargs['second_value'].title()
         last_entry = country_information[(len(country_information) - 1)]
         try:
-            percentage = (last_entry[first_value] / last_entry[second_value]) * 100
+            percentage = str((last_entry[first_value] / last_entry[second_value]) * 100) + '%'
         except ZeroDivisionError:
-            percentage = 0
-        percentage = str(percentage) + "%"
+            percentage = "Division by Zero"
         result_dictionary = {
             "Country": last_entry['Country'],
             first_value: last_entry[first_value],
@@ -111,12 +109,9 @@ class TopCountriesByDate(rest_framework.generics.GenericAPIView):
         second_date = datetime.datetime.strptime(self.kwargs['to'], "%Y-%m-%d")
         case = self.kwargs['case'].title()
         if case not in ("Confirmed", "Deaths", "Recovered"):
-            return rest_framework.response.Response(
-                "Case must be 'confirmed', 'recovered' or 'deaths' not {case}".format(case=case), status=400)
+            return rest_framework.response.Response(f"Case must be 'confirmed', 'recovered' or 'deaths' not {case}", status=400)
         if first_date > second_date:
-            return rest_framework.response.Response(
-                "Please enter a proper date range, {first_date} is after {second_date}".format(
-                    first_date=str(first_date).split(" ")[0], second_date=str(first_date).split(" ")[0]), status=400)
+            return rest_framework.response.Response(f"{str(first_date).split(' ')[0]} must not be after {str(second_date).split(' ')[0]}", status=400)
         first_date = first_date - datetime.timedelta(days=1)
         first_date = str(first_date)
         first_date = first_date.split(" ")
