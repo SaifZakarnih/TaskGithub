@@ -3,6 +3,8 @@ import rest_framework.response
 import rest_framework.decorators
 import rest_framework.permissions
 import rest_framework.views
+from django.db.models import Max, Min
+import django.core.management
 from . import models as covid_models
 import requests
 import rest_framework.generics
@@ -22,7 +24,7 @@ class ImportCountries(rest_framework.views.APIView):
             else:
                 queryset.update(
                     remote_slug=current_country["Slug"], remote_country=current_country["Country"])
-            return rest_framework.response.Response(status=201)
+        return rest_framework.response.Response(status=201)
 
 
 class CountrySubscribe(rest_framework.generics.CreateAPIView):
@@ -101,45 +103,33 @@ class TopCountriesByDate(rest_framework.generics.GenericAPIView):
 
     def get(self, request, number=3, *args, **kwargs):
         try:
-            datetime.datetime.strptime(self.kwargs['from'], "%Y-%m-%d")
-            datetime.datetime.strptime(self.kwargs['to'], "%Y-%m-%d")
+            first_date = datetime.datetime.strptime(self.kwargs['from'], "%Y-%m-%d")
+            second_date = datetime.datetime.strptime(self.kwargs['to'], "%Y-%m-%d")
         except ValueError:
             return rest_framework.response.Response("Date must be in YYYY-MM-DD format!", status=400)
-        first_date = datetime.datetime.strptime(self.kwargs['from'], "%Y-%m-%d")
-        second_date = datetime.datetime.strptime(self.kwargs['to'], "%Y-%m-%d")
         case = self.kwargs['case'].title()
         if case not in ("Confirmed", "Deaths", "Recovered"):
             return rest_framework.response.Response(f"Case must be 'confirmed', 'recovered' or 'deaths' not {case}", status=400)
         if first_date > second_date:
             return rest_framework.response.Response(f"{str(first_date).split(' ')[0]} must not be after {str(second_date).split(' ')[0]}", status=400)
-        first_date = first_date - datetime.timedelta(days=1)
-        first_date = str(first_date)
-        first_date = first_date.split(" ")
-        second_date = str(second_date)
-        second_date = second_date.split(" ")
-        real_first_date = first_date[0]
-        real_second_date = second_date[0]
         attribution_list = covid_models.Covid19APICountryUserAttribution.objects.all()
+        countries_list = []
         result_list = []
-        for current_object in attribution_list:
-            current_country = covid_models.Covid19APICountry.objects.filter(
-                remote_country=current_object.covid_19_api_country)
-            country_information = requests.get(
-                "https://api.covid19api.com/country/{slug}/status/{case}?from={first_date}&to={second_date}".format(
-                    slug=current_country[0].remote_slug,
-                    case=case.lower(),
-                    first_date=real_first_date,
-                    second_date=real_second_date)).json()
+        result_dictionary = {}
+        for attribute in attribution_list:
+            if covid_models.CountryStatusDay.objects.filter(covid_19_country=attribute.covid_19_api_country).exists():
+                countries_list.append(attribute.covid_19_api_country)
+        set(countries_list)
+        for current_country in range(len(countries_list)):
+            attribute_list = covid_models.CountryStatusDay.objects\
+                .filter(covid_19_country=countries_list[current_country],
+                        day__range=[self.kwargs['from'], self.kwargs['to']])\
+                .aggregate(difference=(
+                    Max(("count_cases_"+self.kwargs['case'])) - Min(("count_cases_"+self.kwargs['case'])))
+                )
+            result_dictionary['Country'] = str(countries_list[current_country])
+            result_dictionary[case] = attribute_list['difference']
+            result_list.append(result_dictionary)
             result_dictionary = {}
-            sum_of_cases = 0
-            previous_country = 0
-            for current_day in country_information[1:]:
-                sum_of_cases = sum_of_cases + (current_day['Cases'] - country_information[previous_country]['Cases'])
-                result_dictionary['Country'] = current_day['Country']
-            result_dictionary[case] = sum_of_cases
-            if result_dictionary not in result_list:
-                result_list.append(result_dictionary)
-
         result_list = sorted(result_list, key=lambda d: d[case], reverse=True)
-
         return rest_framework.response.Response(result_list[:number], status=200)

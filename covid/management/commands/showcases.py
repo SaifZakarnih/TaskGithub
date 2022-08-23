@@ -11,7 +11,7 @@ class Command(django.core.management.base.BaseCommand):
         for current_object in attribution_list:
             current_country = covid_models.Covid19APICountry.objects.filter(remote_country=current_object.covid_19_api_country)
             country_information = requests.get("https://api.covid19api.com/total/dayone/country/{key}".format(key=current_country[0])).json()
-            last_entry = country_information[len(country_information) - 1]
+            last_entry = country_information[len(country_information) - 5]
             date = last_entry['Date']
             date = date.split('T')
             queryset = covid_models.CountryStatusDay.objects.filter(covid_19_country=current_object.covid_19_api_country, day=date[0])
