@@ -4,17 +4,20 @@ from ... import models as covid_models
 
 
 class Command(django.core.management.base.BaseCommand):
-    help = "This command registers all users' registered countries status in the database."
+    help = "This command registers all users' registered countries latest status in the database."
 
     def handle(self, *args, **kwargs):
         attribution_list = covid_models.Covid19APICountryUserAttribution.objects.all()
         for current_object in attribution_list:
-            current_country = covid_models.Covid19APICountry.objects.filter(remote_country=current_object.covid_19_api_country)
-            country_information = requests.get("https://api.covid19api.com/total/dayone/country/{key}".format(key=current_country[0])).json()
-            last_entry = country_information[len(country_information) - 5]
+            current_country = covid_models.Covid19APICountry.objects.\
+                filter(remote_country=current_object.covid_19_api_country)
+            country_information = requests.get("https://api.covid19api.com/total/dayone/country/{key}"
+                                               .format(key=current_country[0])).json()
+            last_entry = country_information[len(country_information) - 1]
             date = last_entry['Date']
             date = date.split('T')
-            queryset = covid_models.CountryStatusDay.objects.filter(covid_19_country=current_object.covid_19_api_country, day=date[0])
+            queryset = covid_models.CountryStatusDay.objects.\
+                filter(covid_19_country=current_object.covid_19_api_country, day=date[0])
             if queryset.exists():
                 self.stdout.write('{country} already exists!'.format(country=last_entry['Country']))
             else:

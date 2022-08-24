@@ -3,8 +3,7 @@ import rest_framework.response
 import rest_framework.decorators
 import rest_framework.permissions
 import rest_framework.views
-from django.db.models import Max, Min
-import django.core.management
+import django.db.models
 from . import models as covid_models
 import requests
 import rest_framework.generics
@@ -34,7 +33,8 @@ class CountrySubscribe(rest_framework.generics.CreateAPIView):
         all_slugs = covid_models.Covid19APICountry.objects.values_list('remote_slug', flat=True)
         country_object = covid_models.Covid19APICountry.objects.filter(remote_slug=country_slug)
         if country_object.exists():
-            exist_check = covid_models.Covid19APICountryUserAttribution.objects.filter(user=request.user, covid_19_api_country=country_object[0]).exists()
+            exist_check = covid_models.Covid19APICountryUserAttribution.objects.\
+                filter(user=request.user, covid_19_api_country=country_object[0]).exists()
             if exist_check:
                 return rest_framework.response.Response(
                     f"This user is already subscribed to Country {country_object[0]}",
@@ -51,7 +51,8 @@ class CountrySubscribe(rest_framework.generics.CreateAPIView):
                 }
                 return rest_framework.response.Response(result_dictionary, status=201)
         else:
-            return rest_framework.response.Response(f"Invalid input {country_slug}, please use one of these keys {all_slugs}", status=400)
+            return rest_framework.response.Response(f"Invalid input {country_slug}, "
+                                                    f"please use one of these keys {all_slugs}", status=400)
 
 
 class ViewPercentage(rest_framework.generics.GenericAPIView):
@@ -102,34 +103,46 @@ class TopCountries(rest_framework.generics.GenericAPIView):
 class TopCountriesByDate(rest_framework.generics.GenericAPIView):
 
     def get(self, request, number=3, *args, **kwargs):
-        try:
-            first_date = datetime.datetime.strptime(self.kwargs['from'], "%Y-%m-%d")
-            second_date = datetime.datetime.strptime(self.kwargs['to'], "%Y-%m-%d")
-        except ValueError:
-            return rest_framework.response.Response("Date must be in YYYY-MM-DD format!", status=400)
-        case = self.kwargs['case'].title()
-        if case not in ("Confirmed", "Deaths", "Recovered"):
-            return rest_framework.response.Response(f"Case must be 'confirmed', 'recovered' or 'deaths' not {case}", status=400)
-        if first_date > second_date:
-            return rest_framework.response.Response(f"{str(first_date).split(' ')[0]} must not be after {str(second_date).split(' ')[0]}", status=400)
-        attribution_list = covid_models.Covid19APICountryUserAttribution.objects.all()
         countries_list = []
         result_list = []
         result_dictionary = {}
+        attribution_list = covid_models.Covid19APICountryUserAttribution.objects.all()
         for attribute in attribution_list:
             if covid_models.CountryStatusDay.objects.filter(covid_19_country=attribute.covid_19_api_country).exists():
                 countries_list.append(attribute.covid_19_api_country)
         set(countries_list)
+        try:
+            first_date = (datetime.datetime.strptime(self.kwargs['from'], "%Y-%m-%d"))
+            second_date = datetime.datetime.strptime(self.kwargs['to'], "%Y-%m-%d")
+        except ValueError:
+            return rest_framework.response.Response("Date must be in YYYY-MM-DD format.", status=400)
+        case = self.kwargs['case'].title()
+        if case not in ("Confirmed", "Deaths", "Recovered"):
+            return rest_framework.response.Response(f"Case must be 'confirmed', 'recovered' or 'deaths' not ({case}).",
+                                                    status=400)
+        if first_date > second_date:
+            return rest_framework.response.Response(f"{str(first_date).split(' ')[0]} must not be after "
+                                                    f"{str(second_date).split(' ')[0]}.", status=400)
+        first_date -= datetime.timedelta(days=1)
+        for availability_test in range(len(countries_list)):
+            available = covid_models.CountryStatusDay.objects.\
+                filter(covid_19_country=countries_list[availability_test],
+                       day=first_date)
+            if not available.exists():
+                return rest_framework.response.Response(f"Not enough data to satisfy that request.", status=404)
+
         for current_country in range(len(countries_list)):
             attribute_list = covid_models.CountryStatusDay.objects\
                 .filter(covid_19_country=countries_list[current_country],
-                        day__range=[self.kwargs['from'], self.kwargs['to']])\
+                        day__range=[first_date, second_date])\
                 .aggregate(difference=(
-                    Max(("count_cases_"+self.kwargs['case'])) - Min(("count_cases_"+self.kwargs['case'])))
+                    django.db.models.Max(("count_cases_"+self.kwargs['case'])) -
+                    django.db.models.Min(("count_cases_"+self.kwargs['case'])))
                 )
             result_dictionary['Country'] = str(countries_list[current_country])
             result_dictionary[case] = attribute_list['difference']
-            result_list.append(result_dictionary)
+            if result_dictionary not in result_list:
+                result_list.append(result_dictionary)
             result_dictionary = {}
         result_list = sorted(result_list, key=lambda d: d[case], reverse=True)
         return rest_framework.response.Response(result_list[:number], status=200)
