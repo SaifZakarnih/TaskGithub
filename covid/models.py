@@ -49,10 +49,7 @@ class CountryStatusDay(django.db.models.Model):
         unique_together = ('covid_19_country', 'day')
 
     def __str__(self):
-        country = str(self.covid_19_country)
-        day = str(self.day)
-        display_value = country + ": " + day
-        return display_value
+        return str(self.covid_19_country)
 
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
