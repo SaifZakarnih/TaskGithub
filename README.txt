@@ -1,5 +1,7 @@
 Using the Covid19API - Founder Therapy Task.
 
+* Make sure to run "pip install -r requirements.txt" to get all the necessary packages installed.
+
 1. Create an account using create superuser in the terminal, this will generate a token for you, use it as an authorization in your requests.
 
 2. Through the django admin page press the "+ Add Countries" to fill the database with countries.
