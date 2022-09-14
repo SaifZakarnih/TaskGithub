@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-e(+^jv_1@s(v(h$ynotd3hnek%5juna^koc(b+u5a#(x2k(2(s
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['7001-212-106-94-166.eu.ngrok.io', 'localhost', '127.0.0.1']
 
 
 # Application definition
@@ -139,3 +139,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'covid.User'
 
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+import django_on_heroku
+django_on_heroku.settings(locals())

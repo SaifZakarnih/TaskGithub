@@ -9,6 +9,37 @@ import requests
 import rest_framework.generics
 
 
+class GetToken(rest_framework.generics.CreateAPIView):
+
+    permission_classes = [rest_framework.permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        user_check = covid_models.User.objects.filter(username=self.kwargs['username'], password=self.kwargs['password'])
+        if user_check.exists():
+            token = covid_models.Token.objects.filter(user=covid_models.User.objects.filter(username=self.kwargs['username'])[0])
+            dictionary = {"Token": f"Bearer {token[0]}"}
+            return rest_framework.response.Response(dictionary, status=200)
+        else:
+            return rest_framework.response.Response("Invalid User", status=400)
+
+
+class GetCountries(rest_framework.views.APIView):
+
+    permission_classes = [rest_framework.permissions.AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        list_of_countries = []
+        dictionary_of_countries = {}
+        countries_list = covid_models.Covid19APICountry.objects.all()
+        for current_country in countries_list:
+            dictionary_of_countries['value'] = current_country.remote_slug
+            dictionary_of_countries['label'] = current_country.remote_country
+            list_of_countries.append(dictionary_of_countries)
+            dictionary_of_countries = {}
+        list_of_countries = sorted(list_of_countries, key=lambda d: d['label'])
+        return rest_framework.response.Response(list_of_countries, status=200)
+
+
 class ImportCountries(rest_framework.views.APIView):
 
     permission_classes = [rest_framework.permissions.AllowAny]
