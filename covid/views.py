@@ -88,6 +88,8 @@ class CountrySubscribe(rest_framework.generics.CreateAPIView):
 
 class ViewPercentage(rest_framework.generics.GenericAPIView):
 
+    permission_classes = [rest_framework.permissions.AllowAny]
+
     def get(self, request, *args, **kwargs):
         if (self.kwargs['first_value'] or self.kwargs['second_value']) not in ["confirmed", "deaths", "active"]:
             return rest_framework.response.Response("Case must be confirmed, deaths, or active", status=400)
