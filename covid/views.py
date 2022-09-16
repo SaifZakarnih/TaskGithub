@@ -9,20 +9,6 @@ import requests
 import rest_framework.generics
 
 
-class GetToken(rest_framework.generics.CreateAPIView):
-
-    permission_classes = [rest_framework.permissions.AllowAny]
-
-    def post(self, request, *args, **kwargs):
-        user_check = covid_models.User.objects.filter(username=self.kwargs['username'], password=self.kwargs['password'])
-        if user_check.exists():
-            token = covid_models.Token.objects.filter(user=covid_models.User.objects.filter(username=self.kwargs['username'])[0])
-            dictionary = {"Token": f"Bearer {token[0]}"}
-            return rest_framework.response.Response(dictionary, status=200)
-        else:
-            return rest_framework.response.Response("Invalid User", status=400)
-
-
 class GetCountries(rest_framework.views.APIView):
 
     permission_classes = [rest_framework.permissions.AllowAny]
@@ -87,8 +73,6 @@ class CountrySubscribe(rest_framework.generics.CreateAPIView):
 
 
 class ViewPercentage(rest_framework.generics.GenericAPIView):
-
-    permission_classes = [rest_framework.permissions.AllowAny]
 
     def get(self, request, *args, **kwargs):
         if (self.kwargs['first_value'] or self.kwargs['second_value']) not in ["confirmed", "deaths", "active"]:
