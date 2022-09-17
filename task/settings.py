@@ -26,9 +26,8 @@ SECRET_KEY = 'django-insecure-e(+^jv_1@s(v(h$ynotd3hnek%5juna^koc(b+u5a#(x2k(2(s
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['covid19-saif.herokuapp.com/']
+ALLOWED_HOSTS = []
 
-SECURE_SSL_REDIRECT = True
 
 # Application definition
 
@@ -79,8 +78,6 @@ TEMPLATES = [
         },
     },
 ]
-
-CORS_ORIGIN_ALLOW_ALL = True
 
 WSGI_APPLICATION = 'task.wsgi.application'
 
