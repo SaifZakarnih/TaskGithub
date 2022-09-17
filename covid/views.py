@@ -18,8 +18,8 @@ class GetCountries(rest_framework.views.APIView):
         dictionary_of_countries = {}
         countries_list = covid_models.Covid19APICountry.objects.all()
         for current_country in countries_list:
-            dictionary_of_countries['value'] = current_country.remote_slug
-            dictionary_of_countries['label'] = current_country.remote_country
+            dictionary_of_countries['Country'] = current_country.remote_slug
+            dictionary_of_countries['Slug'] = current_country.remote_country
             list_of_countries.append(dictionary_of_countries)
             dictionary_of_countries = {}
         list_of_countries = sorted(list_of_countries, key=lambda d: d['label'])

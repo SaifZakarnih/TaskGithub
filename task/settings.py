@@ -26,8 +26,9 @@ SECRET_KEY = 'django-insecure-e(+^jv_1@s(v(h$ynotd3hnek%5juna^koc(b+u5a#(x2k(2(s
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['http://covid19-saif.herokuapp.com/']
 
+SECURE_SSL_REDIRECT = True
 
 # Application definition
 
