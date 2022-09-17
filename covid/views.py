@@ -22,7 +22,7 @@ class GetCountries(rest_framework.views.APIView):
             dictionary_of_countries['Slug'] = current_country.remote_country
             list_of_countries.append(dictionary_of_countries)
             dictionary_of_countries = {}
-        list_of_countries = sorted(list_of_countries, key=lambda d: d['label'])
+        list_of_countries = sorted(list_of_countries, key=lambda d: d['Country'])
         return rest_framework.response.Response(list_of_countries, status=200)
 
 
