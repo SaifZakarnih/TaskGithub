@@ -7,7 +7,7 @@ import django.db.models
 from . import models as covid_models
 import requests
 import rest_framework.generics
-
+import json
 
 class GetCountries(rest_framework.views.APIView):
 
@@ -23,7 +23,8 @@ class GetCountries(rest_framework.views.APIView):
             list_of_countries.append(dictionary_of_countries)
             dictionary_of_countries = {}
         list_of_countries = sorted(list_of_countries, key=lambda d: d['Country'])
-        return rest_framework.response.Response(list_of_countries, status=200)
+        json_list = json.dumps(list_of_countries)
+        return rest_framework.response.Response(json_list, status=200)
 
 
 class ImportCountries(rest_framework.views.APIView):
