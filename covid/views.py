@@ -7,7 +7,23 @@ import django.db.models
 from . import models as covid_models
 import requests
 import rest_framework.generics
-import json
+
+
+class CheckSubscription(rest_framework.generics.CreateAPIView):
+
+    def post(self, request, *args, **kwargs):
+        username = kwargs['user']
+        slug = kwargs['slug']
+        user_qs = covid_models.User.objects.filter(username=username)
+        country_qs = covid_models.Covid19APICountry.objects.filter(remote_slug=slug)
+        if not user_qs.exists():
+            return rest_framework.response.Response(status=404)
+        qs = covid_models.Covid19APICountryUserAttribution.objects.filter(user=user_qs[0],
+                                                                          covid_19_api_country=country_qs[0])
+        if qs.exists():
+            return rest_framework.response.Response(status=200)
+        else:
+            return rest_framework.response.Response(status=404)
 
 
 class GetCountries(rest_framework.views.APIView):

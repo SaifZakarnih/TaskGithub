@@ -26,4 +26,7 @@ urlpatterns = [
                      name='Top Countries by Date'),
     django.urls.path('api/v1/countries',
                      covid_views.GetCountries.as_view(),
-                     name='Countries')]
+                     name='Countries'),
+    django.urls.path('api/v1/check/<str:user>/<str:slug>',
+                     covid_views.CheckSubscription.as_view(),
+                     name='Check Sub')]
