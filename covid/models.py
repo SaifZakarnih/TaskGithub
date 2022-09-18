@@ -14,6 +14,7 @@ class Covid19APICountry(django.db.models.Model):
     uuid = shortuuidfield.ShortUUIDField(primary_key=True)
     remote_slug = django.db.models.CharField(max_length=100)
     remote_country = django.db.models.CharField(max_length=100)
+    iso2 = django.db.models.CharField(max_length=100)
 
     def __str__(self):
         return str(self.remote_country)

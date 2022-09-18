@@ -9,6 +9,7 @@ import requests
 import rest_framework.generics
 import json
 
+
 class GetCountries(rest_framework.views.APIView):
 
     permission_classes = [rest_framework.permissions.AllowAny]
@@ -20,6 +21,7 @@ class GetCountries(rest_framework.views.APIView):
         for current_country in countries_list:
             dictionary_of_countries['Slug'] = current_country.remote_slug
             dictionary_of_countries['Country'] = current_country.remote_country
+            dictionary_of_countries['ISO2'] = current_country.iso2
             list_of_countries.append(dictionary_of_countries)
             dictionary_of_countries = {}
         list_of_countries = sorted(list_of_countries, key=lambda d: d['Country'])
@@ -36,10 +38,13 @@ class ImportCountries(rest_framework.views.APIView):
             queryset = covid_models.Covid19APICountry.objects.filter(remote_slug=current_country['Slug'])
             if not queryset.exists():
                 covid_models.Covid19APICountry.objects.create(remote_slug=current_country["Slug"],
-                                                              remote_country=current_country["Country"])
+                                                              remote_country=current_country["Country"],
+                                                              iso2=current_country['ISO2'])
             else:
                 queryset.update(
-                    remote_slug=current_country["Slug"], remote_country=current_country["Country"])
+                    remote_slug=current_country["Slug"],
+                    remote_country=current_country["Country"],
+                    iso2=current_country['ISO2'])
         return rest_framework.response.Response(status=201)
 
 
