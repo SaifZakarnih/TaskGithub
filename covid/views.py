@@ -11,6 +11,8 @@ import rest_framework.generics
 
 class CheckSubscription(rest_framework.generics.CreateAPIView):
 
+    permission_classes = [rest_framework.permissions.AllowAny]
+
     def post(self, request, *args, **kwargs):
         username = kwargs['user']
         slug = kwargs['slug']
